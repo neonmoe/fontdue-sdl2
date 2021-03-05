@@ -1,0 +1,10 @@
+[package]
+name = "fontdue-sdl2"
+version = "0.1.0"
+authors = ["Jens Pitkanen <jens@neon.moe>"]
+edition = "2018"
+
+[dependencies]
+# If either of these is out-of-date, please open an issue.
+sdl2 = "^0.34"
+fontdue = "^0.4"
