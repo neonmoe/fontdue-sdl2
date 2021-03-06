@@ -5,9 +5,11 @@ use fontdue::Font;
 use fontdue_sdl2::FontTexture;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::render::BlendMode;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 pub fn main() -> Result<(), String> {
+    env_logger::init();
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
@@ -29,16 +31,10 @@ pub fn main() -> Result<(), String> {
     let fonts = &[roboto_regular];
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
     layout.append(fonts, &TextStyle::new("Hello ", 35.0, 0));
-    layout.append(fonts, &TextStyle::new("world!", 40.0, 0));
-
-    // sdl2:
-    canvas.clear();
-    canvas.set_blend_mode(BlendMode::Blend);
-    font_texture.draw_text(&mut canvas, fonts, layout.glyphs())?;
-    canvas.present();
+    layout.append(fonts, &TextStyle::new("world! Abcdefg.", 50.0, 0));
+    layout.append(fonts, &TextStyle::new(" Hijklmnopqrstuvwxyz.", 10.0, 0));
 
     let mut event_pump = sdl_context.event_pump()?;
-
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -50,7 +46,20 @@ pub fn main() -> Result<(), String> {
                 _ => {}
             }
         }
-        // The rest of the game loop goes here...
+
+        canvas.set_draw_color(Color::RGB(0x44, 0x44, 0x44));
+        canvas.clear();
+
+        // fontdue-sdl2:
+        font_texture.draw_text(&mut canvas, fonts, layout.glyphs())?;
+
+        // (this just draws the glyph cache for debugging)
+        let glyph_cache_rect = Rect::new(500, 300, 256, 256);
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        let _ = canvas.fill_rect(glyph_cache_rect);
+        let _ = canvas.copy(&font_texture.texture, None, glyph_cache_rect);
+
+        canvas.present();
     }
 
     Ok(())
