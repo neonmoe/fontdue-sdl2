@@ -45,6 +45,7 @@ pub fn main() -> Result<(), String> {
         max_width: Some(780.0),
         ..LayoutSettings::default()
     };
+    let mut show_glyph_cache = false;
 
     let mut event_pump = sdl_context.event_pump()?;
 
@@ -56,28 +57,36 @@ pub fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => show_glyph_cache = !show_glyph_cache,
                 _ => {}
             }
         }
 
-        let (width, height) = canvas.output_size().unwrap();
+        let (width, _) = canvas.output_size().unwrap();
+        let c = Color::RGB(0, 0, 0);
+        let c2 = Color::RGB(0, 0x44, 0);
         layout_settings.max_width = Some(width as f32 - 20.0);
         layout.reset(&layout_settings);
-        layout.append(fonts, &TextStyle::new(TEXT_TITLE, 30.0, 2));
-        layout.append(fonts, &TextStyle::new(TEXT_SUBTITLE, 16.0, 0));
-        layout.append(fonts, &TextStyle::new(TEXT_START, 16.0, 1));
-        layout.append(fonts, &TextStyle::new(TEXT_TAIL, 16.0, 0));
-        layout.append(fonts, &TextStyle::new(TEXT_MORE_1, 64.0, 0));
-        layout.append(fonts, &TextStyle::new(TEXT_MORE_2, 12.0, 0));
+        layout.append(fonts, &TextStyle::with_user_data(TEXT_TITLE, 30.0, 2, c));
+        layout.append(fonts, &TextStyle::with_user_data(TEXT_SUBTITLE, 16.0, 0, c));
+        layout.append(fonts, &TextStyle::with_user_data(TEXT_START, 16.0, 1, c));
+        layout.append(fonts, &TextStyle::with_user_data(TEXT_TAIL, 16.0, 0, c));
+        layout.append(fonts, &TextStyle::with_user_data(TEXT_MORE_1, 16.0, 0, c2));
+        layout.append(fonts, &TextStyle::with_user_data(TEXT_MORE_2, 16.0, 0, c));
 
         canvas.set_draw_color(Color::RGB(0xFF, 0xFF, 0xFE));
         canvas.clear();
 
         font_texture.draw_text(&mut canvas, fonts, layout.glyphs())?;
-        let glyph_cache_rect = Rect::new(width as i32 - 270, height as i32 - 270, 256, 256);
-        canvas.set_draw_color(Color::RGB(0xEE, 0xEE, 0xEE));
-        let _ = canvas.fill_rect(glyph_cache_rect);
-        let _ = canvas.copy(&font_texture.texture, None, glyph_cache_rect);
+        if show_glyph_cache {
+            let glyph_cache_rect = Rect::new(0, 0, 1024, 1024);
+            canvas.set_draw_color(Color::RGB(0xEE, 0xEE, 0xEE));
+            let _ = canvas.fill_rect(glyph_cache_rect);
+            let _ = canvas.copy(&font_texture.texture, None, glyph_cache_rect);
+        }
 
         canvas.present();
     }

@@ -1,4 +1,73 @@
-use fontdue::layout::{GlyphPosition, GlyphRasterConfig};
+//! # fontdue-sdl2
+//!
+//! This crate is glue code for rendering text with [sdl2][sdl2],
+//! rasterized and laid out by [fontdue][fontdue].
+//!
+//! # Usage
+//!
+//! First, set up fontdue and layout some glyphs with the [`Color`]
+//! included as user data:
+//!
+//! ```
+//! # use fontdue::{Font, layout::{Layout, TextStyle, CoordinateSystem}};
+//! # use fontdue_sdl2::FontTexture;
+//! # use sdl2::pixels::Color;
+//! let font = include_bytes!("../examples/roboto/Roboto-Regular.ttf") as &[u8];
+//! let roboto_regular = Font::from_bytes(font, Default::default()).unwrap();
+//! let fonts = &[roboto_regular];
+//! let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
+//! layout.append(fonts, &TextStyle::with_user_data(
+//!     "Hello, World!",           // The text to lay out
+//!     32.0,                      // The font size
+//!     0,                         // The font index (Roboto Regular)
+//!     Color::RGB(0xFF, 0xFF, 0)  // The color of the text
+//! ));
+//! ```
+//!
+//! Then draw them using a [`FontTexture`]. It needs a
+//! [`TextureCreator`], just as any SDL [`Texture`].
+//!
+//! ```
+//! # use fontdue::{Font, layout::{Layout, TextStyle, CoordinateSystem}};
+//! # use fontdue_sdl2::FontTexture;
+//! # use sdl2::pixels::Color;
+//! # let sdl_context = sdl2::init().unwrap();
+//! # let video_subsystem = sdl_context.video().unwrap();
+//! # let window = video_subsystem.window("fontdue-sdl2 example", 800, 600).position_centered().build().unwrap();
+//! # let mut canvas = window.into_canvas().build().unwrap();
+//! # let texture_creator = canvas.texture_creator();
+//! # let font = include_bytes!("../examples/roboto/Roboto-Regular.ttf") as &[u8];
+//! # let roboto_regular = Font::from_bytes(font, Default::default()).unwrap();
+//! # let fonts = &[roboto_regular];
+//! # let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
+//! # layout.append(fonts, &TextStyle::with_user_data(
+//! #     "Hello, World!",           // The text to lay out
+//! #     32.0,                      // The font size
+//! #     0,                         // The font index (Roboto Regular)
+//! #     Color::RGB(0xFF, 0xFF, 0)  // The color of the text
+//! # ));
+//! # canvas.clear();
+//! let mut font_texture = FontTexture::new(&texture_creator).unwrap();
+//! let _ = font_texture.draw_text(&mut canvas, fonts, layout.glyphs());
+//! # canvas.present();
+//! ```
+//!
+//! Note that drawing text can fail if there are issues with the
+//! rendering setup. It's often valid to simply ignore, or crash.
+//!
+//! The [`FontTexture`] is intended to be created once, at the
+//! beginning of your program, and then used throughout. Generally,
+//! you should treat [`FontTexture`] similarly to the [`Font`]-slice
+//! passed to fontdue, and associate each [`FontTexture`] with a
+//! specific `&[Font]`. See the [`FontTexture`] documentation for more
+//! information.
+//!
+//! See `examples/basic.rs` for a complete example program.
+//!
+//! [fontdue]: https://docs.rs/fontdue
+//! [sdl2]: https://docs.rs/sdl2
+
+use fontdue::layout::GlyphPosition;
 use fontdue::Font;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
@@ -7,7 +76,7 @@ use sdl2::render::{BlendMode, Canvas, RenderTarget, Texture, TextureCreator};
 mod rect_allocator;
 use rect_allocator::{CacheReservation, RectAllocator};
 
-/// A text-rendering-enabled wrapper for [Texture].
+/// A text-rendering-enabled wrapper for [`Texture`].
 pub struct FontTexture<'r> {
     /// The texture containing rendered glyphs in a tightly packed
     /// manner.
@@ -17,20 +86,18 @@ pub struct FontTexture<'r> {
 }
 
 impl FontTexture<'_> {
-    /// Creates a new [FontTexture] for rendering text.
+    /// Creates a new [`FontTexture`] for rendering text.
     ///
     /// Consider the lifetimes of this structure and the given
-    /// [TextureCreator] as you would a
-    /// [Texture] created with one, that is why this
-    /// structure is named "FontTexture".
+    /// [`TextureCreator`] as you would a [`Texture`] created with
+    /// one, that is why this structure is named "FontTexture".
     ///
     /// # Important note
     ///
-    /// Only use a single set of [Font]s for each
-    /// [FontTexture]. Glyphs with the same index but different font
-    /// are hard to differentiate, so using different sets of Fonts
-    /// when rendering with a single FontTexture will lead to wrong
-    /// results.
+    /// Only use a single `&[Font]` for each [`FontTexture`]. Glyphs
+    /// with the same index but different font are hard to
+    /// differentiate, so using different sets of Fonts when rendering
+    /// with a single FontTexture will lead to wrong results.
     ///
     /// # Errors
     ///
@@ -41,8 +108,8 @@ impl FontTexture<'_> {
         use sdl2::render::TextureValueError::*;
         let mut texture = match texture_creator.create_texture_streaming(
             Some(PixelFormatEnum::RGBA8888),
-            256,
-            256,
+            1024,
+            1024,
         ) {
             Ok(t) => t,
             Err(WidthOverflows(_))
@@ -54,7 +121,7 @@ impl FontTexture<'_> {
         };
         texture.set_blend_mode(BlendMode::Blend);
 
-        let rect_allocator = RectAllocator::new(256, 256);
+        let rect_allocator = RectAllocator::new(1024, 1024);
 
         Ok(FontTexture {
             texture,
@@ -65,14 +132,14 @@ impl FontTexture<'_> {
     /// Renders text to the given canvas, using the given fonts and
     /// glyphs.
     ///
-    /// The canvas should be the same one that the [TextureCreator]
-    /// used in [FontTexture::new] was created from.
+    /// The canvas should be the same one that the [`TextureCreator`]
+    /// used in [`FontTexture::new`] was created from.
     ///
     /// The font-slice should be the same one that is passed to
-    /// [Layout::append](fontdue::layout::Layout::append).
+    /// [`Layout::append`](fontdue::layout::Layout::append).
     ///
     /// The glyphs should be from
-    /// [Layout::glyphs](fontdue::layout::Layout::glyphs).
+    /// [`Layout::glyphs`](fontdue::layout::Layout::glyphs).
     ///
     /// # Errors
     ///
@@ -86,7 +153,7 @@ impl FontTexture<'_> {
         &mut self,
         canvas: &mut Canvas<RT>,
         fonts: &[Font],
-        glyphs: &[GlyphPosition],
+        glyphs: &[GlyphPosition<Color>],
     ) -> Result<(), String> {
         struct RenderableGlyph {
             texture_rect: Rect,
@@ -110,7 +177,7 @@ impl FontTexture<'_> {
                 glyph.width as u32,
                 glyph.height as u32,
             );
-            let color = Color::RGB(0x0, 0x0, 0x0);
+            let color = glyph.user_data;
 
             match self.rect_allocator.get_rect_in_texture(*glyph) {
                 CacheReservation::AlreadyRasterized(texture_rect) => {

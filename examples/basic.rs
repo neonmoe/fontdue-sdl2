@@ -5,6 +5,7 @@ use fontdue::Font;
 use fontdue_sdl2::FontTexture;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::pixels::Color;
 
 pub fn main() -> Result<(), String> {
     env_logger::init();
@@ -27,9 +28,10 @@ pub fn main() -> Result<(), String> {
     let font = include_bytes!("roboto/Roboto-Regular.ttf") as &[u8];
     let roboto_regular = Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
     let fonts = &[roboto_regular];
+    let color = Color::RGB(0xFF, 0xFF, 0);
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
-    layout.append(fonts, &TextStyle::new("Hello ", 32.0, 0));
-    layout.append(fonts, &TextStyle::new("world!", 16.0, 0));
+    layout.append(fonts, &TextStyle::with_user_data("Hello ", 32.0, 0, color));
+    layout.append(fonts, &TextStyle::with_user_data("world!", 16.0, 0, color));
 
     // sdl2 / fontdue-sdl2:
     canvas.clear();

@@ -1,10 +1,12 @@
 use fontdue::layout::{GlyphPosition, GlyphRasterConfig};
+use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use std::collections::HashMap;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct GlyphKey {
     glyph: GlyphRasterConfig,
+    color: Color,
 }
 
 pub enum CacheReservation {
@@ -26,8 +28,11 @@ impl RectAllocator {
         }
     }
 
-    pub fn get_rect_in_texture(&mut self, glyph: GlyphPosition) -> CacheReservation {
-        let key = GlyphKey { glyph: glyph.key };
+    pub fn get_rect_in_texture(&mut self, glyph: GlyphPosition<Color>) -> CacheReservation {
+        let key = GlyphKey {
+            glyph: glyph.key,
+            color: glyph.user_data,
+        };
         if let Some(already_reserved) = self.reserved_rects.get(&key) {
             CacheReservation::AlreadyRasterized(*already_reserved)
         } else if let Some(new_rect) = self.get_empty_slot(glyph.width as u32, glyph.height as u32)
