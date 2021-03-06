@@ -86,7 +86,10 @@ impl FontTexture<'_> {
         let mut result_glyphs = Vec::with_capacity(glyphs.len());
         let mut missing_glyphs = Vec::new();
 
-        for glyph in glyphs {
+        for glyph in glyphs
+            .into_iter()
+            .filter(|glyph| glyph.width * glyph.height > 0)
+        {
             let canvas_rect = Rect::new(
                 glyph.x as i32,
                 glyph.y as i32,
@@ -94,7 +97,7 @@ impl FontTexture<'_> {
                 glyph.height as u32,
             );
             let key = glyph.key;
-            let color = Color::RGB(0xFF, 0xFF, 0x0);
+            let color = Color::RGB(0x0, 0x0, 0x0);
 
             match self.rect_allocator.get_rect_in_texture(*glyph) {
                 CacheReservation::AlreadyRasterized(texture_rect) => {

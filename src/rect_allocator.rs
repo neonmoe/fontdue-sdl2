@@ -98,15 +98,33 @@ impl RectAllocator {
             }
         }
 
+        // TODO(opt): Is the sort & consolidate really needed?
+        // TODO: Reclaiming unused areas
+        // TODO: Resizing the texture
+
         // Sort the empty rects by size (smallest first, so small
         // glyphs will fit into the small nooks and crannies if
         // possible)
         self.empty_rects
             .sort_by(|a, b| (a.width() * a.height()).cmp(&(b.width() * b.height())));
 
-        // TODO: Loop from biggest to smallest, remove rects that are completely within another
-        // Reasoning: this should avoid "fake small areas" that are
-        // created inside bigger areas by the splitting algorithm above.
+        // Remove rects that are completely within another. Reasoning:
+        // this should avoid "fake small areas" that are created
+        // inside bigger areas by the splitting algorithm above.
+        let mut i = 1;
+        while i < self.empty_rects.len() {
+            let rect = self.empty_rects[i];
+            let mut j = 0;
+            while j < i {
+                if rect.contains_rect(self.empty_rects[j]) {
+                    self.empty_rects.remove(j);
+                    i -= 1;
+                } else {
+                    j += 1;
+                }
+            }
+            i += 1;
+        }
 
         Some(new_rect)
     }
