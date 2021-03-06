@@ -31,6 +31,12 @@ impl FontTexture<'_> {
     /// are hard to differentiate, so using different sets of Fonts
     /// when rendering with a single FontTexture will lead to wrong
     /// results.
+    ///
+    /// # Errors
+    ///
+    /// The function will return an error if the Texture can't be
+    /// created, and the Err(String) will contain an error string from
+    /// SDL.
     pub fn new<'r, T>(texture_creator: &'r TextureCreator<T>) -> Result<FontTexture<'r>, String> {
         use sdl2::render::TextureValueError::*;
         let mut texture = match texture_creator.create_texture_streaming(
@@ -67,6 +73,15 @@ impl FontTexture<'_> {
     ///
     /// The glyphs should be from
     /// [Layout::glyphs](fontdue::layout::Layout::glyphs).
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the Texture cannot be
+    /// written to, or a copy from the texture to the canvas
+    /// fails. This should only really happen under very exceptional
+    /// circumstances, so text rendering is interrupted by these
+    /// errors. The Err(String) will contain an informational string
+    /// from SDL.
     pub fn draw_text<RT: RenderTarget>(
         &mut self,
         canvas: &mut Canvas<RT>,
@@ -74,7 +89,6 @@ impl FontTexture<'_> {
         glyphs: &[GlyphPosition],
     ) -> Result<(), String> {
         struct RenderableGlyph {
-            key: GlyphRasterConfig,
             texture_rect: Rect,
             canvas_rect: Rect,
         }
@@ -96,24 +110,23 @@ impl FontTexture<'_> {
                 glyph.width as u32,
                 glyph.height as u32,
             );
-            let key = glyph.key;
             let color = Color::RGB(0x0, 0x0, 0x0);
 
             match self.rect_allocator.get_rect_in_texture(*glyph) {
                 CacheReservation::AlreadyRasterized(texture_rect) => {
                     result_glyphs.push(RenderableGlyph {
-                        key,
                         texture_rect,
                         canvas_rect,
                     });
                 }
                 CacheReservation::EmptySpace(texture_rect) => {
-                    let (_metrics, pixels) = fonts[key.font_index].rasterize_config(key);
+                    let (_metrics, pixels) =
+                        fonts[glyph.key.font_index].rasterize_config(glyph.key);
                     let color_base = ((color.r as u32) << 24)
                         | ((color.g as u32) << 16)
                         | ((color.b as u32) << 8);
 
-                    if let Err(err) = self.texture.with_lock(texture_rect, |tex_pixels, pitch| {
+                    self.texture.with_lock(texture_rect, |tex_pixels, pitch| {
                         let tex_pixels: &mut [u32] = bytemuck::cast_slice_mut(tex_pixels);
                         let pitch = pitch / 4;
                         for (i, coverage) in pixels.into_iter().enumerate() {
@@ -121,29 +134,18 @@ impl FontTexture<'_> {
                             let y = i / glyph.width;
                             tex_pixels[x + y * pitch] = color_base | coverage as u32;
                         }
-                    }) {
-                        log::error!(
-                            "Error when uploading glyph bitmap of  '{}' (size {}, font index {}): {}",
-                            key.c,
-                            key.px,
-                            key.font_index,
-                            err,
-                        );
-                        missing_glyphs.push(MissingGlyph { color, canvas_rect });
-                    } else {
-                        result_glyphs.push(RenderableGlyph {
-                            key,
-                            texture_rect,
-                            canvas_rect,
-                        });
-                    }
+                    })?;
+                    result_glyphs.push(RenderableGlyph {
+                        texture_rect,
+                        canvas_rect,
+                    });
                 }
                 CacheReservation::OutOfSpace => {
                     log::error!(
                         "Glyph cache cannot fit '{}' (size {}, font index {})",
-                        key.c,
-                        key.px,
-                        key.font_index,
+                        glyph.key.c,
+                        glyph.key.px,
+                        glyph.key.font_index,
                     );
                     missing_glyphs.push(MissingGlyph { color, canvas_rect });
                 }
@@ -151,15 +153,7 @@ impl FontTexture<'_> {
         }
 
         for glyph in result_glyphs {
-            if let Err(err) = canvas.copy(&self.texture, glyph.texture_rect, glyph.canvas_rect) {
-                log::error!(
-                    "Error when copying glyph '{}' (size {}, font index {}) to canvas: {}",
-                    glyph.key.c,
-                    glyph.key.px,
-                    glyph.key.font_index,
-                    err,
-                );
-            }
+            canvas.copy(&self.texture, glyph.texture_rect, glyph.canvas_rect)?;
         }
 
         let previous_color = canvas.draw_color();
