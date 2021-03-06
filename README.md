@@ -1,4 +1,8 @@
 # fontdue-sdl2
+
+![docs.rs badge](https://docs.rs/fontdue-sdl2/badge.svg)
+[![crates.io badge](https://img.shields.io/crates/d/fontdue-sdl2)](https://crates.io/crates/fontdue-sdl2)
+
 A crate for drawing text with [sdl2::render][sdl2::render], using
 [fontdue][fontdue] for rasterization. This library is glue-code, all
 the good parts are from the aforementioned libraries.

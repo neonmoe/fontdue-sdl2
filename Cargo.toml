@@ -1,11 +1,14 @@
 [package]
 name = "fontdue-sdl2"
-version = "0.1.0"
+version = "0.2.0-alpha.0"
 authors = ["Jens Pitkanen <jens@neon.moe>"]
 edition = "2018"
 description = "A glue crate between fontdue and sdl2"
 license = "MIT"
 repository = "https://github.com/neonmoe/fontdue-sdl2"
+
+[badges]
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 # If either of these is out-of-date, please open an issue.
