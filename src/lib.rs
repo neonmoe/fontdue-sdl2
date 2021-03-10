@@ -107,7 +107,7 @@ impl FontTexture<'_> {
     pub fn new<'r, T>(texture_creator: &'r TextureCreator<T>) -> Result<FontTexture<'r>, String> {
         use sdl2::render::TextureValueError::*;
         let mut texture = match texture_creator.create_texture_streaming(
-            Some(PixelFormatEnum::RGBA8888),
+            Some(PixelFormatEnum::RGBA32), // = the pixels are always [r, g, b, a] when read as u8's.
             1024,
             1024,
         ) {
@@ -187,21 +187,19 @@ impl FontTexture<'_> {
                     });
                 }
                 CacheReservation::EmptySpace(texture_rect) => {
-                    let (_metrics, pixels) =
-                        fonts[glyph.key.font_index].rasterize_config(glyph.key);
-                    let color_base = ((color.r as u32) << 24)
-                        | ((color.g as u32) << 16)
-                        | ((color.b as u32) << 8);
+                    let (metrics, pixels) = fonts[glyph.key.font_index].rasterize_config(glyph.key);
 
-                    self.texture.with_lock(texture_rect, |tex_pixels, pitch| {
-                        let tex_pixels: &mut [u32] = bytemuck::cast_slice_mut(tex_pixels);
-                        let pitch = pitch / 4;
-                        for (i, coverage) in pixels.into_iter().enumerate() {
-                            let x = i % glyph.width;
-                            let y = i / glyph.width;
-                            tex_pixels[x + y * pitch] = color_base | coverage as u32;
-                        }
-                    })?;
+                    let mut full_color_pixels = Vec::with_capacity(pixels.len());
+                    for coverage in pixels {
+                        full_color_pixels.push(color.r);
+                        full_color_pixels.push(color.g);
+                        full_color_pixels.push(color.b);
+                        full_color_pixels.push(coverage);
+                    }
+                    self.texture
+                        .update(texture_rect, &full_color_pixels, metrics.width * 4)
+                        .map_err(|err| format!("{}", err))?;
+
                     result_glyphs.push(RenderableGlyph {
                         texture_rect,
                         canvas_rect,

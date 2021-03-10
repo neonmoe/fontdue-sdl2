@@ -15,7 +15,6 @@ maintenance = { status = "actively-developed" }
 sdl2 = "^0.34"
 fontdue = "^0.4"
 
-bytemuck = "^1.5.1"
 log = "^0.4.14"
 
 [dev-dependencies]
