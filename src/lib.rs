@@ -187,7 +187,7 @@ impl FontTexture<'_> {
                     });
                 }
                 CacheReservation::EmptySpace(texture_rect) => {
-                    let (metrics, pixels) = fonts[glyph.key.font_index].rasterize_config(glyph.key);
+                    let (metrics, pixels) = fonts[glyph.font_index].rasterize_config(glyph.key);
 
                     let mut full_color_pixels = Vec::with_capacity(pixels.len());
                     for coverage in pixels {
@@ -208,9 +208,9 @@ impl FontTexture<'_> {
                 CacheReservation::OutOfSpace => {
                     log::error!(
                         "Glyph cache cannot fit '{}' (size {}, font index {})",
-                        glyph.key.c,
+                        glyph.parent,
                         glyph.key.px,
-                        glyph.key.font_index,
+                        glyph.font_index,
                     );
                     missing_glyphs.push(MissingGlyph { color, canvas_rect });
                 }

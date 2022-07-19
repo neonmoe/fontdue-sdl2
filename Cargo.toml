@@ -12,8 +12,8 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 # If either of these is out-of-date, please open an issue.
-sdl2 = "^0.34"
-fontdue = "^0.4"
+sdl2 = "^0.35"
+fontdue = "^0.7"
 
 log = "^0.4.14"
 
