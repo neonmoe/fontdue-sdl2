@@ -77,6 +77,7 @@ mod rect_allocator;
 use rect_allocator::{CacheReservation, RectAllocator};
 
 /// A text-rendering-enabled wrapper for [`Texture`].
+#[cfg(not(feature="unsafe_textures"))]
 pub struct FontTexture<'r> {
     /// The texture containing rendered glyphs in a tightly packed
     /// manner.
@@ -85,6 +86,7 @@ pub struct FontTexture<'r> {
     rect_allocator: RectAllocator,
 }
 
+#[cfg(not(feature="unsafe_textures"))]
 impl FontTexture<'_> {
     /// Creates a new [`FontTexture`] for rendering text.
     ///
@@ -105,6 +107,168 @@ impl FontTexture<'_> {
     /// created, and the Err(String) will contain an error string from
     /// SDL.
     pub fn new<'r, T>(texture_creator: &'r TextureCreator<T>) -> Result<FontTexture<'r>, String> {
+        use sdl2::render::TextureValueError::*;
+        let mut texture = match texture_creator.create_texture_streaming(
+            Some(PixelFormatEnum::RGBA32), // = the pixels are always [r, g, b, a] when read as u8's.
+            1024,
+            1024,
+        ) {
+            Ok(t) => t,
+            Err(WidthOverflows(_))
+            | Err(HeightOverflows(_))
+            | Err(WidthMustBeMultipleOfTwoForFormat(_, _)) => {
+                unreachable!()
+            }
+            Err(SdlError(s)) => return Err(s),
+        };
+        texture.set_blend_mode(BlendMode::Blend);
+
+        let rect_allocator = RectAllocator::new(1024, 1024);
+
+        Ok(FontTexture {
+            texture,
+            rect_allocator,
+        })
+    }
+
+    /// Renders text to the given canvas, using the given fonts and
+    /// glyphs.
+    ///
+    /// The canvas should be the same one that the [`TextureCreator`]
+    /// used in [`FontTexture::new`] was created from.
+    ///
+    /// The font-slice should be the same one that is passed to
+    /// [`Layout::append`](fontdue::layout::Layout::append).
+    ///
+    /// The glyphs should be from
+    /// [`Layout::glyphs`](fontdue::layout::Layout::glyphs).
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the Texture cannot be
+    /// written to, or a copy from the texture to the canvas
+    /// fails. This should only really happen under very exceptional
+    /// circumstances, so text rendering is interrupted by these
+    /// errors. The Err(String) will contain an informational string
+    /// from SDL.
+    pub fn draw_text<RT: RenderTarget>(
+        &mut self,
+        canvas: &mut Canvas<RT>,
+        fonts: &[Font],
+        glyphs: &[GlyphPosition<Color>],
+    ) -> Result<(), String> {
+        struct RenderableGlyph {
+            texture_rect: Rect,
+            canvas_rect: Rect,
+        }
+        struct MissingGlyph {
+            color: Color,
+            canvas_rect: Rect,
+        }
+
+        let mut result_glyphs = Vec::with_capacity(glyphs.len());
+        let mut missing_glyphs = Vec::new();
+
+        for glyph in glyphs
+            .into_iter()
+            .filter(|glyph| glyph.width * glyph.height > 0)
+        {
+            let canvas_rect = Rect::new(
+                glyph.x as i32,
+                glyph.y as i32,
+                glyph.width as u32,
+                glyph.height as u32,
+            );
+            let color = glyph.user_data;
+
+            match self.rect_allocator.get_rect_in_texture(*glyph) {
+                CacheReservation::AlreadyRasterized(texture_rect) => {
+                    result_glyphs.push(RenderableGlyph {
+                        texture_rect,
+                        canvas_rect,
+                    });
+                }
+                CacheReservation::EmptySpace(texture_rect) => {
+                    let (metrics, pixels) = fonts[glyph.font_index].rasterize_config(glyph.key);
+
+                    let mut full_color_pixels = Vec::with_capacity(pixels.len());
+                    for coverage in pixels {
+                        full_color_pixels.push(color.r);
+                        full_color_pixels.push(color.g);
+                        full_color_pixels.push(color.b);
+                        full_color_pixels.push(coverage);
+                    }
+                    self.texture
+                        .update(texture_rect, &full_color_pixels, metrics.width * 4)
+                        .map_err(|err| format!("{}", err))?;
+
+                    result_glyphs.push(RenderableGlyph {
+                        texture_rect,
+                        canvas_rect,
+                    });
+                }
+                CacheReservation::OutOfSpace => {
+                    log::error!(
+                        "Glyph cache cannot fit '{}' (size {}, font index {})",
+                        glyph.parent,
+                        glyph.key.px,
+                        glyph.font_index,
+                    );
+                    missing_glyphs.push(MissingGlyph { color, canvas_rect });
+                }
+            }
+        }
+
+        for glyph in result_glyphs {
+            canvas.copy(&self.texture, glyph.texture_rect, glyph.canvas_rect)?;
+        }
+
+        let previous_color = canvas.draw_color();
+        for glyph in missing_glyphs {
+            canvas.set_draw_color(glyph.color);
+            let _ = canvas.draw_rect(glyph.canvas_rect);
+        }
+        canvas.set_draw_color(previous_color);
+
+        Ok(())
+    }
+}
+
+
+// unsafe textures version
+// I don't think it is possible to implement this in less repetetive way
+
+/// A text-rendering-enabled wrapper for [`Texture`].
+#[cfg(feature="unsafe_textures")]
+pub struct FontTexture {
+    /// The texture containing rendered glyphs in a tightly packed
+    /// manner.
+    pub texture: Texture,
+
+    rect_allocator: RectAllocator,
+}
+
+#[cfg(feature="unsafe_textures")]
+impl FontTexture {
+    /// Creates a new [`FontTexture`] for rendering text.
+    ///
+    /// Consider the lifetimes of this structure and the given
+    /// [`TextureCreator`] as you would a [`Texture`] created with
+    /// one, that is why this structure is named "FontTexture".
+    ///
+    /// # Important note
+    ///
+    /// Only use a single `&[Font]` for each [`FontTexture`]. Glyphs
+    /// with the same index but different font are hard to
+    /// differentiate, so using different sets of Fonts when rendering
+    /// with a single FontTexture will lead to wrong results.
+    ///
+    /// # Errors
+    ///
+    /// The function will return an error if the Texture can't be
+    /// created, and the Err(String) will contain an error string from
+    /// SDL.
+    pub fn new<T>(texture_creator: &TextureCreator<T>) -> Result<FontTexture,String> {
         use sdl2::render::TextureValueError::*;
         let mut texture = match texture_creator.create_texture_streaming(
             Some(PixelFormatEnum::RGBA32), // = the pixels are always [r, g, b, a] when read as u8's.
