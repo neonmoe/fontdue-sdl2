@@ -17,5 +17,8 @@ fontdue = "^0.7"
 
 log = "^0.4.14"
 
+[features]
+unsafe_textures = ["sdl2/unsafe_textures"]
+
 [dev-dependencies]
 env_logger = "^0.8.3"
