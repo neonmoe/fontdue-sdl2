@@ -13,7 +13,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install SDL2
       run: |
         sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe restricted multiverse"
@@ -21,21 +21,31 @@ jobs:
         sudo apt-get install libsdl2-dev
     - name: Build
       run: cargo build --verbose
+    - name: Run tests
+      run: |
+        cargo test --verbose
+        cargo test --verbose --features=unsafe_textures
   build-windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install SDL2
       run: vcpkg.exe install sdl2:x64-windows
     - name: Build
       run: cargo build --verbose
+    - name: Run tests
+      run: |
+        cargo test --verbose
+        cargo test --verbose --features=unsafe_textures
   build-macos:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install SDL2
       run: brew install SDL2
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        cargo test --verbose
+        cargo test --verbose --features=unsafe_textures

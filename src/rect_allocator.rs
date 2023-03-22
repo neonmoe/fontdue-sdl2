@@ -47,11 +47,9 @@ impl RectAllocator {
     fn get_empty_slot(&mut self, width: u32, height: u32) -> Option<Rect> {
         let new_rect = if let Some(rect) = self
             .empty_rects
-            .iter_mut()
-            .filter(|rect| rect.width() >= width && rect.height() >= height)
-            .next()
+            .iter_mut().find(|rect| rect.width() >= width && rect.height() >= height)
         {
-            let mut new_rect = rect.clone();
+            let mut new_rect = *rect;
             new_rect.resize(width, height);
             new_rect
         } else {
@@ -70,32 +68,32 @@ impl RectAllocator {
                 let intersecting_rect = self.empty_rects.remove(i);
 
                 if intersecting_rect.left() < new_rect.left() {
-                    let mut new_empty = intersecting_rect.clone();
+                    let mut new_empty = intersecting_rect;
                     new_empty.set_width((new_rect.left() - intersecting_rect.left()) as u32);
-                    debug_assert!(new_empty.has_intersection(new_rect) == false);
+                    debug_assert!(!new_empty.has_intersection(new_rect));
                     self.empty_rects.push(new_empty);
                 }
 
                 if intersecting_rect.right() > new_rect.right() {
-                    let mut new_empty = intersecting_rect.clone();
+                    let mut new_empty = intersecting_rect;
                     new_empty.set_width((intersecting_rect.right() - new_rect.right()) as u32);
                     new_empty.set_x(new_rect.right());
-                    debug_assert!(new_empty.has_intersection(new_rect) == false);
+                    debug_assert!(!new_empty.has_intersection(new_rect));
                     self.empty_rects.push(new_empty);
                 }
 
                 if intersecting_rect.top() < new_rect.top() {
-                    let mut new_empty = intersecting_rect.clone();
+                    let mut new_empty = intersecting_rect;
                     new_empty.set_height((new_rect.top() - intersecting_rect.top()) as u32);
-                    debug_assert!(new_empty.has_intersection(new_rect) == false);
+                    debug_assert!(!new_empty.has_intersection(new_rect));
                     self.empty_rects.push(new_empty);
                 }
 
                 if intersecting_rect.bottom() > new_rect.bottom() {
-                    let mut new_empty = intersecting_rect.clone();
+                    let mut new_empty = intersecting_rect;
                     new_empty.set_height((intersecting_rect.bottom() - new_rect.bottom()) as u32);
                     new_empty.set_y(new_rect.bottom());
-                    debug_assert!(new_empty.has_intersection(new_rect) == false);
+                    debug_assert!(!new_empty.has_intersection(new_rect));
                     self.empty_rects.push(new_empty);
                 }
             } else {
@@ -110,8 +108,7 @@ impl RectAllocator {
         // Sort the empty rects by size (smallest first, so small
         // glyphs will fit into the small nooks and crannies if
         // possible)
-        self.empty_rects
-            .sort_by(|a, b| (a.width() * a.height()).cmp(&(b.width() * b.height())));
+        self.empty_rects.sort_by_key(|a| a.width() * a.height());
 
         // Remove rects that are completely within another. Reasoning:
         // this should avoid "fake small areas" that are created
