@@ -1,6 +1,6 @@
 # fontdue-sdl2
 
-![docs.rs badge](https://docs.rs/fontdue-sdl2/badge.svg)
+[![docs.rs badge](https://docs.rs/fontdue-sdl2/badge.svg)][docs]
 [![crates.io badge](https://img.shields.io/crates/d/fontdue-sdl2)](https://crates.io/crates/fontdue-sdl2)
 [![GitHub Actions badge](https://img.shields.io/github/actions/workflow/status/neonmoe/fontdue-sdl2/rust.yml?branch=main)](https://github.com/neonmoe/fontdue-sdl2)
 
