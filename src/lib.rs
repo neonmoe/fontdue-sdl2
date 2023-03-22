@@ -86,6 +86,8 @@ mod rect_allocator;
 use rect_allocator::{CacheReservation, RectAllocator};
 
 pub use public_api::FontTexture;
+pub use fontdue;
+pub use sdl2;
 
 /// Called by [FontTexture::new].
 pub(crate) fn create_font_texture<T>(
