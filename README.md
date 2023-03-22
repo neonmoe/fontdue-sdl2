@@ -2,7 +2,7 @@
 
 ![docs.rs badge](https://docs.rs/fontdue-sdl2/badge.svg)
 [![crates.io badge](https://img.shields.io/crates/d/fontdue-sdl2)](https://crates.io/crates/fontdue-sdl2)
-[![GitHub Actions badge](https://img.shields.io/github/workflow/status/neonmoe/fontdue-sdl2/Rust)](https://github.com/neonmoe/fontdue-sdl2)
+[![GitHub Actions badge](https://img.shields.io/github/actions/workflow/status/neonmoe/fontdue-sdl2/rust.yml?branch=main)](https://github.com/neonmoe/fontdue-sdl2)
 
 A crate for drawing text with [sdl2::render][sdl2::render], using
 [fontdue][fontdue] for rasterization. This library is glue-code, all

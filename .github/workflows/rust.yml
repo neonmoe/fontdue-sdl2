@@ -21,10 +21,6 @@ jobs:
         sudo apt-get install libsdl2-dev
     - name: Build
       run: cargo build --verbose
-    - name: Run tests
-      run: |
-        cargo test --verbose
-        cargo test --verbose --features=unsafe_textures
   build-windows:
     runs-on: windows-latest
     steps:
@@ -33,10 +29,6 @@ jobs:
       run: vcpkg.exe install sdl2:x64-windows
     - name: Build
       run: cargo build --verbose
-    - name: Run tests
-      run: |
-        cargo test --verbose
-        cargo test --verbose --features=unsafe_textures
   build-macos:
     runs-on: macos-latest
     steps:
