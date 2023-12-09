@@ -1,6 +1,6 @@
 [package]
 name = "fontdue-sdl2"
-version = "0.3.1"
+version = "0.3.2-alpha.0"
 authors = ["Jens Pitkanen <jens@neon.moe>"]
 edition = "2018"
 description = "A glue crate between fontdue and sdl2"
