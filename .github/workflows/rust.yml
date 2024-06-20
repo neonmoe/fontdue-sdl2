@@ -33,11 +33,9 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install SDL2
-      run: brew install SDL2
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --features=sdl2/bundled
     - name: Run tests
       run: |
-        cargo test --verbose
-        cargo test --verbose --features=unsafe_textures
+        cargo test --verbose --features=sdl2/bundled
+        cargo test --verbose --features="unsafe_textures sdl2/bundled"
