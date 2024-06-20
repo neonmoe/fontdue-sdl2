@@ -1,6 +1,6 @@
 [package]
 name = "fontdue-sdl2"
-version = "0.3.2-alpha.0"
+version = "0.3.2"
 authors = ["Jens Pitkanen <jens@neon.moe>"]
 edition = "2018"
 description = "A glue crate between fontdue and sdl2"
@@ -12,8 +12,8 @@ maintenance = { status = "passively-maintained" }
 
 [dependencies]
 # If either of these is out-of-date, please open an issue.
-sdl2 = "^0.36"
-fontdue = "^0.8"
+sdl2 = "^0.37"
+fontdue = "^0.9"
 
 log = "^0.4.14"
 
